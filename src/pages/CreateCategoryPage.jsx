@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiSave } from "react-icons/fi";
-import useBlogStore from "../store/blogStore";
+import useBlogStore from "../store/ContentStore";
 
 const CreateCategoryPage = () => {
   const navigate = useNavigate();

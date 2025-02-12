@@ -9,7 +9,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
-import useBlogStore from "../store/blogStore";
+import useBlogStore from "../store/ContentStore";
 
 // Skeleton Components
 const CategoryTableSkeleton = () => {

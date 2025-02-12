@@ -9,7 +9,7 @@ import {
   FiChevronRight,
   FiSearch,
 } from "react-icons/fi";
-import useBlogStore from "../store/blogStore";
+import useBlogStore from "../store/ContentStore";
 
 // import useBlogStore from "../store/blogStore";
 

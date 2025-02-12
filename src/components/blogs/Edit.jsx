@@ -3,9 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiSave, FiArrowLeft, FiSend } from "react-icons/fi";
 import { BiArchive } from "react-icons/bi";
-import useBlogStore from "../../store/blogStore";
 import Editor from "./Editor";
 import toast from "react-hot-toast";
+import useBlogStore from "../../store/ContentStore";
 
 const Edit = () => {
   const navigate = useNavigate();

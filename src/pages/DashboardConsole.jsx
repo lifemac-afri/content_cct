@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import useBlogStore from "../store/blogStore";
+import useBlogStore from "../store/ContentStore";
 
 const MetricCard = ({ icon: Icon, title, value, trend, className }) => (
   <div className={`p-6 bg-white rounded-xl shadow-sm ${className}`}>

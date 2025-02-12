@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiEdit2, FiTrash2 } from "react-icons/fi";
-import useBlogStore from "../../store/blogStore";
 import FroalaEditorView from "react-froala-wysiwyg/FroalaEditorView";
 import { BiSend, BiShareAlt } from "react-icons/bi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import toast from "react-hot-toast";
+import useBlogStore from "../../store/ContentStore";
 
 const View = () => {
   const navigate = useNavigate();
