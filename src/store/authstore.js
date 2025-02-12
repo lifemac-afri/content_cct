@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabaseClient } from "../supabase/client";
 
-// Auth store
 const useAuthStore = create(
   persist(
     (set) => ({
@@ -29,10 +28,14 @@ const useAuthStore = create(
       logout: async () => {
         set({ loading: true });
         try {
-          await supabaseClient.auth.signOut();
-          set({ user: null, loading: false });
+          const { error } = await supabaseClient.auth.signOut();
+          if (error) throw error;
+
+          set({ user: null, loading: false, error: null });
+          return true; // Return true to indicate successful logout
         } catch (error) {
           set({ error: error.message, loading: false });
+          return false; // Return false to indicate failed logout
         }
       },
 
@@ -47,8 +50,8 @@ const useAuthStore = create(
       },
     }),
     {
-      name: "auth-store", // Name of the storage key
-      getStorage: () => localStorage, // Use localStorage for persistence
+      name: "auth-store",
+      getStorage: () => localStorage,
     }
   )
 );
