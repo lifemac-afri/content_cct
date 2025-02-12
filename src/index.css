@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+.uid {
+  @apply border-2 border-red-600;
+}
+
+.group:hover .group-hover\:flex {
+  display: flex !important;
+}
+
+.btn {
+  @apply shadow font-light uppercase;
+}
+
+.ce-block__content {
+  padding: 0px;
+}
+.clip-paint {
+  -webkit-mask-image: url("./assets/explosion.svg");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
