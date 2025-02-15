@@ -20,7 +20,18 @@ const Add = () => {
     fetchCategories();
   }, [fetchCategories]);
 
+  const generateSlug = (title) => {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+  };
+
   const handleSubmit = async (publishStatus) => {
+    const slug = generateSlug(title);
+
     if (!title.trim()) {
       toast.error("Please enter a blog title");
       return;
@@ -38,6 +49,7 @@ const Add = () => {
         content,
         category,
         published: publishStatus,
+        slug,
         created_at: new Date().toISOString(),
       };
 
