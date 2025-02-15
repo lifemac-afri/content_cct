@@ -1,4 +1,8 @@
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import {
+  Navigate,
+  RouterProvider,
+  createBrowserRouter,
+} from "react-router-dom";
 import "./App.css";
 import {
   AddBlogPage,
@@ -13,6 +17,7 @@ import {
 } from "./pages";
 import Layout from "./layout/Layout";
 import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
   const router = createBrowserRouter([
@@ -23,11 +28,23 @@ function App() {
 
     {
       path: "/",
-      element: <Layout />,
+      element: (
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      ),
       children: [
         {
-          path: "console",
+          path: "",
           index: true,
+          element: (
+            <ProtectedRoute>
+              <Navigate to="/console" replace />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "console",
           element: <DashboardConsole />,
         },
         {

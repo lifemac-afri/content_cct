@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { FaHome, FaBlog, FaTags, FaUser, FaCog } from "react-icons/fa";
 import { BiLogOut } from "react-icons/bi";
 import useAuthStore from "../../store/authstore";
@@ -31,11 +31,10 @@ const Sidebar = () => {
       } md:block`}
     >
       <div className="flex justify-center items-center p-4 text-2xl font-bold text-center gap-5">
-        <FaBlog className="w-10 h-10" />
-        <span>CMS Panel</span>
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden">
-          {isOpen ? "✖" : "☰"}
-        </button>
+        <Link to={"/console"}>
+          <FaBlog className="w-10 h-10" />
+          <span>CMS Panel</span>
+        </Link>
       </div>
       <nav className="flex flex-col mt-4 space-y-2 px-4">
         {menuItems.map((item) => (

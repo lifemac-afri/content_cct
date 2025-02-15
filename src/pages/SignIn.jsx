@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import useAuthStore from "../store/authstore";
 import { side } from "../assets";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 const SignIn = () => {
   const { login, logout, user, error, loading, loadUser } = useAuthStore();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -16,15 +17,42 @@ const SignIn = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     const email = e.target.email.value;
     const password = e.target.password.value;
 
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       await login(email, password);
+
+      // Check if there's an error in the store after login attempt
+      const currentError = useAuthStore.getState().error;
+      if (currentError) {
+        throw new Error(currentError);
+      }
+
       toast.success("Login successful!");
-      navigate("/console"); // Replace "/console" with the actual console route
+
+      // Redirect to console page
+      navigate("/console");
     } catch (err) {
-      toast.error(error || "Login failed. Please try again.");
+      // Handle specific error cases
+      const errorMessage = err.message.toLowerCase();
+      if (errorMessage.includes("invalid credentials")) {
+        toast.error("Invalid email or password");
+      } else if (errorMessage.includes("network")) {
+        toast.error("Network error. Please check your connection");
+      } else {
+        toast.error(err.message || "Login failed. Please try again");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -58,6 +86,7 @@ const SignIn = () => {
                 autoComplete="email"
                 required
                 name="email"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -70,6 +99,7 @@ const SignIn = () => {
                 className="w-full px-4 py-3 rounded-lg bg-gray-200 mt-2 border focus:border-primary_green focus:bg-white focus:outline-none"
                 required
                 name="password"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -85,9 +115,9 @@ const SignIn = () => {
             <button
               type="submit"
               className="w-full flex items-center justify-center bg-primary_green hover:bg-dark_green focus:bg-dark_green text-white font-semibold rounded-lg px-4 py-3 mt-6 "
-              disabled={loading}
+              disabled={isSubmitting || loading}
             >
-              {loading ? (
+              {isSubmitting || loading ? (
                 <AiOutlineLoading3Quarters className="animate-spin w-5 h-5" />
               ) : (
                 "Log In"
