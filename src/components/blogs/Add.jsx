@@ -70,7 +70,7 @@ const Add = () => {
     <div className="mx-auto p-6 max-h-screen">
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate("/posts")}
+          onClick={() => navigate(-1)}
           className="flex items-center text-gray-600 hover:text-gray-800 transition"
         >
           <FiArrowLeft className="mr-2" />
