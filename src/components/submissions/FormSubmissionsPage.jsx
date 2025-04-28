@@ -20,35 +20,70 @@ const FormSubmissionsPage = () => {
   const [approving, setApproving] = useState(false);
   const itemsPerPage = 10;
 
+  // Function to format form type for display
+  const formatFormType = (type) => {
+    const formTypes = {
+      passport_applications: "Passport",
+      birth_certificates: "Birth Certificate",
+      company_applications: "Company Registration",
+      sole_proprietorship_applications: "Sole Proprietorship"
+    };
+    return formTypes[type] || type.replace(/_/g, ' ');
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
       if (formType === "all") {
+        // Fetch all submissions from all tables
         const [passports, birthCerts, companies, soleProps] = await Promise.all([
-          supabaseClient.from("passport_applications").select("*"),
-          supabaseClient.from("birth_certificates").select("*"),
-          supabaseClient.from("company_applications").select("*"),
-          supabaseClient.from("sole_proprietorship_applications").select("*"),
+          supabaseClient.from("passport_applications").select("*").order("updated_at", { ascending: false }),
+          supabaseClient.from("birth_certificates").select("*").order("updated_at", { ascending: false }),
+          supabaseClient.from("company_applications").select("*").order("updated_at", { ascending: false }),
+          supabaseClient.from("sole_proprietorship_applications").select("*").order("updated_at", { ascending: false }),
         ]);
 
         const allSubmissions = [
-          ...(passports.data?.map(item => ({ ...item, form_type: "passport_applications" })) || []),
-          ...(birthCerts.data?.map(item => ({ ...item, form_type: "birth_certificates" })) || []),
-          ...(companies.data?.map(item => ({ ...item, form_type: "company_applications" })) || []),
-          ...(soleProps.data?.map(item => ({ ...item, form_type: "sole_proprietorship_applications" })) || []),
+          ...(passports.data?.map(item => ({ 
+            ...item, 
+            form_type: "passport_applications",
+            formatted_form_type: formatFormType("passport_applications")
+          })) || []),
+          ...(birthCerts.data?.map(item => ({ 
+            ...item, 
+            form_type: "birth_certificates",
+            formatted_form_type: formatFormType("birth_certificates")
+          })) || []),
+          ...(companies.data?.map(item => ({ 
+            ...item, 
+            form_type: "company_applications",
+            formatted_form_type: formatFormType("company_applications")
+          })) || []),
+          ...(soleProps.data?.map(item => ({ 
+            ...item, 
+            form_type: "sole_proprietorship_applications",
+            formatted_form_type: formatFormType("sole_proprietorship_applications")
+          })) || []),
         ];
 
+        // Sort all submissions by updated_at in descending order
+        allSubmissions.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
         setSubmissions(allSubmissions);
       } else {
+        // Fetch submissions for a specific form type
         const { data, error } = await supabaseClient
           .from(formType)
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("updated_at", { ascending: false });
 
         if (error) throw error;
-        setSubmissions(data.map(item => ({ ...item, form_type: formType })));
+        setSubmissions(data.map(item => ({ 
+          ...item, 
+          form_type: formType,
+          formatted_form_type: formatFormType(formType)
+        })));
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
@@ -84,7 +119,10 @@ const FormSubmissionsPage = () => {
       // Update in Supabase
       const { error: updateError } = await supabaseClient
         .from(updatedSubmission.form_type)
-        .update({ status: "approved" })
+        .update({ 
+          status: "approved",
+          updated_at: new Date().toISOString()
+        })
         .eq("id", updatedSubmission.id);
 
       if (updateError) throw updateError;
@@ -99,7 +137,11 @@ const FormSubmissionsPage = () => {
       if (fetchError) throw fetchError;
 
       setSubmissions(prev => prev.map(sub => 
-        sub.id === updatedSubmission.id ? data : sub
+        sub.id === updatedSubmission.id ? { 
+          ...data, 
+          form_type: updatedSubmission.form_type,
+          formatted_form_type: formatFormType(updatedSubmission.form_type)
+        } : sub
       ));
       setSelectedSubmission(null);
       toast.success("Submission approved successfully");
@@ -196,6 +238,7 @@ const FormSubmissionsPage = () => {
       <SubmissionTable
         submissions={paginatedSubmissions}
         loading={false}
+        showFormType={formType === "all"} // Pass this prop to show/hide form type column
         onRowClick={(submission) => 
           navigate(`${submission.id}`, { 
             state: { formType: submission.form_type },

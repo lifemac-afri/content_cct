@@ -12,14 +12,14 @@ import {
   FaCertificate,
   FaBuilding,
   FaUserTie,
-  FaArrowRight
+  FaArrowRight,
+  FaEye
 } from "react-icons/fa";
 
 // Components
 import ErrorBoundary from "../../components/submissions/ErrorBoundary";
 import LoadingSkeleton from "../../components/submissions/LoadingSkeleton";
 import MetricCard from "../../components/submissions/MetricCard";
-import SubmissionTable from "../../components/submissions/SubmissionTable";
 import AnalyticsDashboard from "../../components/submissions/AnalyticsDashboard";
 import SubmissionDetailModal from "../../components/submissions/SubmissionDetailModal";
 import StatusBadge from "../../components/submissions/StatusBadge";
@@ -32,73 +32,72 @@ const SubmissionsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [formFilter, setFormFilter] = useState("all");
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [page, setPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [error, setError] = useState(null);
-  const [activeCard, setActiveCard] = useState(null);
+  const [activeCard, setActiveCard] = useState("total");
   const navigate = useNavigate();
   const location = useLocation();
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
   const handleViewAll = () => {
-    if (activeCard) {
-      const formTypeMap = {
-        'passport': 'passport_applications',
-        'birth': 'birth_certificates',
-        'company': 'company_applications',
-        'sole': 'sole_proprietorship_applications'
-      };
-      navigate(`/console/form_submits/${formTypeMap[activeCard]}`);
-    } else {
-      navigate('/console/form_submits/all');
-    }
-  };
-
-  const handleRowClick = (submission) => {
-    navigate(`/submissions/detail/${submission.id}`, {
-      state: { formType: submission.form_type }
-    });
-  };
-
-  // Real-time subscription
-  useEffect(() => {
-    const subscription = supabaseClient
-      .channel('submissions_changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        fetchData(); // Refresh data when changes occur
-      })
-      .subscribe();
-
-    return () => {
-      supabaseClient.removeChannel(subscription);
+    const formTypeMap = {
+      'total': 'all',
+      'passport': 'passport_applications',
+      'birth': 'birth_certificates',
+      'company': 'company_applications',
+      'sole': 'sole_proprietorship_applications'
     };
-  }, []);
+    
+    navigate(`/console/form_submits/${formTypeMap[activeCard]}`);
+  };
 
+  // Improved data fetching with error handling
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const results = await Promise.all([
-        supabaseClient.from('passport_applications').select('*'),
-        supabaseClient.from('birth_certificates').select('*'),
-        supabaseClient.from('company_applications').select('*'),
-        supabaseClient.from('sole_proprietorship_applications').select('*')
-      ]);
+      // Fetch each table separately with proper error handling
+      const fetchTable = async (tableName) => {
+        try {
+          const { data, error } = await supabaseClient
+            .from(tableName)
+            .select('*');
+          
+          if (error) {
+            console.error(`Error fetching ${tableName}:`, error);
+            return [];
+          }
+          return data?.map(item => ({ 
+            ...item, 
+            form_type: tableName,
+            status: item.status || "pending"
+          })) || [];
+        } catch (err) {
+          console.error(`Error with ${tableName}:`, err);
+          return [];
+        }
+      };
+
+      const tables = [
+        'passport_applications',
+        'birth_certificates',
+        'company_applications',
+        'sole_proprietorship_applications'
+      ];
+
+      // Fetch all tables in parallel but handle each one individually
+      const results = await Promise.all(tables.map(table => fetchTable(table)));
+      
+      // Combine all results
+      const allSubmissions = results.flat();
   
-      const allSubmissions = results.flatMap((result, index) => {
-        const formTypes = [
-          'passport_applications',
-          'birth_certificates',
-          'company_applications',
-          'sole_proprietorship_applications'
-        ];
-        
-        return result.data?.map(item => ({ 
-          ...item, 
-          form_type: formTypes[index],
-          status: item.status || "pending"
-        })) || [];
-      });
+      // Sort by created_at in descending order
+      allSubmissions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   
       setSubmissions(allSubmissions);
     } catch (error) {
@@ -123,7 +122,6 @@ const SubmissionsDashboard = () => {
             : sub
         )
       );
-      // Clear the navigation state
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, navigate, location.pathname]);
@@ -149,29 +147,24 @@ const SubmissionsDashboard = () => {
       );
     });
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
-  const paginatedSubmissions = filteredSubmissions.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
+  // Get recent submissions based on active card
+  const getRecentSubmissions = () => {
+    let filtered = [...submissions]; // Already sorted by date
 
-  const recentSubmissions = [...submissions]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 5);
+    if (activeCard !== 'total') {
+      const formTypeMap = {
+        'passport': 'passport_applications',
+        'birth': 'birth_certificates',
+        'company': 'company_applications',
+        'sole': 'sole_proprietorship_applications'
+      };
+      filtered = filtered.filter(sub => sub.form_type === formTypeMap[activeCard]);
+    }
 
-  // Filter recent submissions by active card if one is selected
-  const filteredRecentSubmissions = activeCard 
-    ? recentSubmissions.filter(sub => {
-        switch(activeCard) {
-          case 'passport': return sub.form_type === 'passport_applications';
-          case 'birth': return sub.form_type === 'birth_certificates';
-          case 'company': return sub.form_type === 'company_applications';
-          case 'sole': return sub.form_type === 'sole_proprietorship_applications';
-          default: return true;
-        }
-      })
-    : recentSubmissions;
+    return filtered.slice(0, 5);
+  };
+
+  const recentSubmissions = getRecentSubmissions();
 
   const handleExport = async () => {
     try {
@@ -198,7 +191,7 @@ const SubmissionsDashboard = () => {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 
@@ -208,15 +201,13 @@ const SubmissionsDashboard = () => {
         sub.id === submissionId ? { ...sub, status: 'approved' } : sub
       )
     );
-
     setSelectedSubmission(prev => 
       prev && prev.id === submissionId ? { ...prev, status: 'approved' } : prev
     );
   };
 
   const handleCardClick = (cardType) => {
-    setActiveCard(cardType === activeCard ? null : cardType);
-    
+    setActiveCard(cardType);
     const formTypeMap = {
       'total': 'all',
       'passport': 'passport_applications',
@@ -224,7 +215,6 @@ const SubmissionsDashboard = () => {
       'company': 'company_applications',
       'sole': 'sole_proprietorship_applications'
     };
-    
     setFormFilter(formTypeMap[cardType] || 'all');
   };
 
@@ -270,7 +260,7 @@ const SubmissionsDashboard = () => {
               icon={FaFileAlt}
               title="Total Submissions"
               value={submissions.length}
-              onClick={null}
+              onClick={() => handleCardClick('total')}
               isActive={activeCard === 'total'}
             />
             <MetricCard
@@ -320,7 +310,17 @@ const SubmissionsDashboard = () => {
                 <select
                   className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
                   value={formFilter}
-                  onChange={(e) => setFormFilter(e.target.value)}
+                  onChange={(e) => {
+                    setFormFilter(e.target.value);
+                    const cardTypeMap = {
+                      'all': 'total',
+                      'passport_applications': 'passport',
+                      'birth_certificates': 'birth',
+                      'company_applications': 'company',
+                      'sole_proprietorship_applications': 'sole'
+                    };
+                    setActiveCard(cardTypeMap[e.target.value] || 'total');
+                  }}
                 >
                   <option value="all">All Forms</option>
                   <option value="passport_applications">Passport</option>
@@ -348,7 +348,7 @@ const SubmissionsDashboard = () => {
             </div>
           </div>
 
-          {/* Analytics Dashboard */}
+          {/* Analytics Dashboard - shows all submissions */}
           <AnalyticsDashboard submissions={submissions} />
 
           {/* Recent Submissions */}
@@ -356,14 +356,12 @@ const SubmissionsDashboard = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 Recent Submissions
-                {activeCard && (
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    ({activeCard === 'total' ? 'All Forms' : 
-                      activeCard === 'passport' ? 'Passport' :
-                      activeCard === 'birth' ? 'Birth Certificate' :
-                      activeCard === 'company' ? 'Company' : 'Sole Proprietorship'})
-                  </span>
-                )}
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({activeCard === 'total' ? 'All Forms' : 
+                    activeCard === 'passport' ? 'Passport' :
+                    activeCard === 'birth' ? 'Birth Certificate' :
+                    activeCard === 'company' ? 'Company' : 'Sole Proprietorship'})
+                </span>
               </h2>
               <button
                 onClick={handleViewAll}
@@ -373,59 +371,35 @@ const SubmissionsDashboard = () => {
               </button>
             </div>
             <div className="space-y-4">
-              {filteredRecentSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
-                  onClick={() => setSelectedSubmission(submission)}
-                >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 capitalize">
-                      {submission.form_type.replace('_', ' ')}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {new Date(submission.created_at).toLocaleString()}
-                    </p>
+              {recentSubmissions.length > 0 ? (
+                recentSubmissions.map((submission) => (
+                  <div
+                    key={submission.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+                    onClick={() => setSelectedSubmission(submission)}
+                  >
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 capitalize">
+                        {submission.form_type.replace('_', ' ')}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {new Date(submission.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <StatusBadge status={submission.status} />
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                        View
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <StatusBadge status={submission.status} />
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                      View
-                    </span>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  No recent submissions found
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-
-          {/* Submissions Table */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <SubmissionTable
-              submissions={paginatedSubmissions}
-              loading={loading}
-              onRowClick={handleRowClick}
-            />
-            
-            {/* Pagination Controls */}
-            {filteredSubmissions.length > itemsPerPage && (
-              <div className="flex justify-between items-center mt-4">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <span>Page {page} of {totalPages}</span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
