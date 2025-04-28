@@ -15,9 +15,13 @@ import {
   SignIn,
   ViewBlogPage,
 } from "./pages";
+import SubmissionsDashboard from "./pages/form_dashboards/SubmissionsDashboard";
 import Layout from "./layout/Layout";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ErrorBoundary from "./components/submissions/ErrorBoundary";
+import FormSubmissionsPage from "./components/submissions/FormSubmissionsPage";
+import FormDetailPage from "./components/submissions/FormDetailPage";
 
 function App() {
   const router = createBrowserRouter([
@@ -33,20 +37,49 @@ function App() {
           <Layout />
         </ProtectedRoute>
       ),
+      errorElement: <ErrorBoundary />,
       children: [
         {
-          path: "",
           index: true,
-          element: (
-            <ProtectedRoute>
-              <Navigate to="/console" replace />
-            </ProtectedRoute>
-          ),
+          element: <Navigate to="/console" replace />,
         },
         {
           path: "console",
           element: <DashboardConsole />,
         },
+        {
+          path: "console/form_submits",
+          children: [
+            {
+              index: true,
+              element: <SubmissionsDashboard />,
+            },
+            {
+              path: ":formType",
+              element: <FormSubmissionsPage />,
+            },
+            {
+              path: ":formType/:id",
+              element: <FormDetailPage />,
+            },
+          ],
+        },
+        // {
+        //   path: "form_submits",
+        //   element: (
+        //     <ErrorBoundary>
+        //       <SubmissionsDashboard />
+        //     </ErrorBoundary>
+        //   ),
+        // },
+        // {
+        //   path: "form_dashboards/:id",
+        //   element: (
+        //     <ErrorBoundary>
+        //       <FormDetailPage />
+        //     </ErrorBoundary>
+        //   ),
+        // },
         {
           path: "posts",
           element: <BlogsPage />,

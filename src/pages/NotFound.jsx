@@ -5,11 +5,11 @@ const NotFound = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-center">
       <div className="flex flex-col items-center gap-4">
         {/* Illustration */}
-        <img
+        {/* <img
           src="https://via.placeholder.com/300x200?text=404+Illustration"
           alt="404 Illustration"
           className="w-64 md:w-80"
-        />
+        /> */}
 
         {/* Error Message */}
         <h1 className="text-4xl font-bold text-gray-800 md:text-6xl">404</h1>

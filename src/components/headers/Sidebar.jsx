@@ -15,6 +15,7 @@ const Sidebar = () => {
     { name: "Blog Posts", path: "/posts", icon: <FaBlog /> },
     { name: "Categories", path: "/categories", icon: <FaTags /> },
     { name: "Settings", path: "/console/settings", icon: <FaCog /> },
+    { name: "Form Dashboard", path: "/console/form_submits", icon: <FaUser /> },
   ];
 
   const handleLogout = async () => {

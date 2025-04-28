@@ -7,6 +7,7 @@ import EditBlogPage from "./EditBlogPage";
 import NotFound from "./NotFound";
 import SignIn from "./SignIn";
 import ViewBlogPage from "./ViewBlogPage";
+import SubmissionsDashboard from "./form_dashboards/SubmissionsDashboard";
 
 export {
   DashboardConsole,
@@ -18,4 +19,5 @@ export {
   CreateCategoryPage,
   EditBlogPage,
   ViewBlogPage,
+  SubmissionsDashboard
 };
