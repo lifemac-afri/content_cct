@@ -1,40 +1,14 @@
-import React, { useState } from "react";
-import { FaFileAlt, FaTimes, FaImage } from "react-icons/fa";
-import { supabaseClient } from "../../supabase/client";
+import React from "react";
+import { FaTimes } from "react-icons/fa";
 import StatusBadge from "./StatusBadge";
 
 const SubmissionDetailModal = ({ submission, onClose }) => {
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const getBucketName = () => {
-    switch(submission?.form_type) {
-      case "passport_applications":
-        return "passport_uploads";
-      case "company_applications":
-        return "company_uploads";
-      case "sole_proprietorship_applications":
-        return "sole_proprietorship_uploads";
-      default:
-        return "uploads";
-    }
-  };
-
-  const getPublicUrl = (filePath) => {
-    if (!filePath) return null;
-    const bucketName = getBucketName();
-    const { data: { publicUrl } } = supabaseClient
-      .storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
-    return publicUrl;
-  };
-
   const renderField = (label, value) => (
-    <div className="mb-2 px-2">
-      <label className="block text-sm font-medium text-gray-700">
+    <div className="mb-4 px-2"> {/* Increased margin-bottom */}
+      <label className="block text-base font-medium text-gray-800"> {/* Increased text size */}
         {label}
       </label>
-      <p className="mt-1 text-sm text-gray-900 break-words">
+      <p className="mt-2 text-base text-gray-900 break-words"> {/* Increased text size and margin-top */}
         {value !== null && value !== undefined && value !== '' 
           ? value 
           : "Not provided"}
@@ -42,57 +16,11 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
     </div>
   );
 
-  const renderFile = (label, filePath, isImage = false) => {
-    const publicUrl = getPublicUrl(filePath);
-    
-    if (!publicUrl) return (
-      <p className="text-sm text-gray-500">No file uploaded</p>
-    );
-
-    return (
-      <div className="mb-2 px-2">
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-        {isImage ? (
-          <div className="mt-1">
-            <button 
-              onClick={() => setSelectedImage(publicUrl)}
-              className="group relative"
-            >
-              <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
-                <img 
-                  src={publicUrl} 
-                  alt={label}
-                  className="object-contain max-h-full max-w-full"
-                  onError={(e) => {
-                    e.target.onerror = null; 
-                    e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23EEE'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23000' text-anchor='middle' dominant-baseline='middle'%3EImage%3C/text%3E%3C/svg%3E";
-                  }}
-                />
-              </div>
-            </button>
-          </div>
-        ) : (
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline flex items-center text-sm"
-          >
-            <FaFileAlt className="inline mr-1" size={12} />
-            View File
-          </a>
-        )}
-      </div>
-    );
-  };
-
   const renderFormFields = () => {
     if (!submission) return null;
 
     const commonProps = {
-      className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2"
+      className: "grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4" /* Increased gaps */
     };
 
     switch (submission.form_type) {
@@ -109,8 +37,6 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
             {renderField("Mother's Name", submission.mother_name)}
             {renderField("Father's Name", submission.father_name)}
             {renderField("Status", submission.marital_status)}
-            {renderFile("Ghana Card", submission.ghana_card, true)}
-            {renderFile("Birth Cert", submission.birth_certificate)}
           </div>
         );
       case "birth_certificates":
@@ -141,8 +67,6 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
             {renderField("TIN", submission.director_tin)}
             {renderField("Capital", submission.stated_capital)}
             {renderField("Type", "Company Registration")}
-            {renderFile("Ghana Card Front", submission.ghana_card_front, true)}
-            {renderFile("Ghana Card Back", submission.ghana_card_back, true)}
           </div>
         );
       case "sole_proprietorship_applications":
@@ -158,8 +82,6 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
             {renderField("Business Type", submission.nature_of_business)}
             {renderField("Occupation", submission.occupation)}
             {renderField("Type", "Sole Proprietorship")}
-            {renderFile("Ghana Card Front", submission.ghana_card_front, true)}
-            {renderFile("Ghana Card Back", submission.ghana_card_back, true)}
           </div>
         );
       default:
@@ -171,55 +93,32 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      {/* Image Preview Modal */}
-      {selectedImage && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-screen">
-            <img 
-              src={selectedImage} 
-              alt="Preview" 
-              className="max-w-full max-h-screen object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-2 right-2 text-white text-xl hover:text-gray-300"
-            >
-              <FaTimes />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Modal */}
       <div className="bg-white rounded-lg w-full max-w-3xl mx-auto relative">
+        {/* Close button with increased size */}
         <button
           onClick={onClose}
-          className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100 transition-colors"
+          className="absolute top-5 right-5 text-gray-500 hover:text-gray-700"
           aria-label="Close modal"
         >
-          <FaTimes className="text-gray-600 text-lg" />
+          <FaTimes className="text-2xl" /> {/* Increased size */}
         </button>
 
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-3">
+        <div className="p-8"> {/* Increased padding */}
+          <div className="flex justify-between items-center mb-6"> {/* Increased margin-bottom */}
             <div className="w-full">
-              <h2 className="text-xl font-bold text-gray-800">
+              <h2 className="text-2xl font-bold text-gray-900"> {/* Increased text size */}
                 {submission.form_type.replace(/_/g, " ")}
               </h2>
-              <div className="flex items-center mt-1">
+              <div className="flex items-center mt-2"> {/* Increased margin-top */}
                 <StatusBadge status={submission.status} />
-                <span className="ml-2 text-xs text-gray-600">
+                <span className="ml-3 text-sm text-gray-600"> {/* Increased text size and margin-left */}
                   {new Date(submission.created_at).toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-6"> {/* Increased margin-top */}
             {renderFormFields()}
           </div>
         </div>
