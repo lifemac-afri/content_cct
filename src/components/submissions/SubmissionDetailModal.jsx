@@ -1,207 +1,226 @@
-// SubmissionDetailModal.js
 import React, { useState } from "react";
-import { FaFileAlt, FaDownload, FaTimes, FaSpinner } from "react-icons/fa";
+import { FaFileAlt, FaTimes, FaImage } from "react-icons/fa";
 import { supabaseClient } from "../../supabase/client";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import StatusBadge from "./StatusBadge";
-import { toast } from "react-toastify";
 
-const SubmissionDetailModal = ({ submission, onClose, onApprove }) => {
-  const [loading, setLoading] = useState(false);
+const SubmissionDetailModal = ({ submission, onClose }) => {
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const getBucketName = () => {
+    switch(submission?.form_type) {
+      case "passport_applications":
+        return "passport_uploads";
+      case "company_applications":
+        return "company_uploads";
+      case "sole_proprietorship_applications":
+        return "sole_proprietorship_uploads";
+      default:
+        return "uploads";
+    }
+  };
+
+  const getPublicUrl = (filePath) => {
+    if (!filePath) return null;
+    const bucketName = getBucketName();
+    const { data: { publicUrl } } = supabaseClient
+      .storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+    return publicUrl;
+  };
 
   const renderField = (label, value) => (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-500">{label}</label>
-      <p className="mt-1 text-sm text-gray-900">{value || "Not provided"}</p>
+    <div className="mb-2 px-2">
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <p className="mt-1 text-sm text-gray-900 break-words">
+        {value !== null && value !== undefined && value !== '' 
+          ? value 
+          : "Not provided"}
+      </p>
     </div>
   );
 
-  const renderFile = (label, fileUrl) => (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-500">{label}</label>
-      {fileUrl ? (
-        <a
-          href={
-            supabaseClient.storage.from("uploads").getPublicUrl(fileUrl)
-              .publicUrl
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:underline flex items-center"
-        >
-          <FaFileAlt className="inline mr-1" />
-          View File
-        </a>
-      ) : (
-        <p className="text-sm text-gray-500">No file uploaded</p>
-      )}
-    </div>
-  );
-
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text(
-      submission.form_type === "passport_applications"
-        ? "Passport Application Details"
-        : submission.form_type === "birth_certificates"
-        ? "Birth Certificate Request Details"
-        : submission.form_type === "company_applications"
-        ? "Company Registration Details"
-        : "Sole Proprietorship Registration Details",
-      14,
-      20
+  const renderFile = (label, filePath, isImage = false) => {
+    const publicUrl = getPublicUrl(filePath);
+    
+    if (!publicUrl) return (
+      <p className="text-sm text-gray-500">No file uploaded</p>
     );
 
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Status: ${submission.status}`, 14, 30);
-    doc.text(
-      `Submission Date: ${new Date(submission.created_at).toLocaleString()}`,
-      14,
-      36
+    return (
+      <div className="mb-2 px-2">
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        {isImage ? (
+          <div className="mt-1">
+            <button 
+              onClick={() => setSelectedImage(publicUrl)}
+              className="group relative"
+            >
+              <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
+                <img 
+                  src={publicUrl} 
+                  alt={label}
+                  className="object-contain max-h-full max-w-full"
+                  onError={(e) => {
+                    e.target.onerror = null; 
+                    e.target.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23EEE'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23000' text-anchor='middle' dominant-baseline='middle'%3EImage%3C/text%3E%3C/svg%3E";
+                  }}
+                />
+              </div>
+            </button>
+          </div>
+        ) : (
+          <a
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline flex items-center text-sm"
+          >
+            <FaFileAlt className="inline mr-1" size={12} />
+            View File
+          </a>
+        )}
+      </div>
     );
-
-    const tableData = [];
-    const tableColumns = [
-      { header: "Field", dataKey: "field" },
-      { header: "Value", dataKey: "value" },
-    ];
-
-    if (submission.form_type === "passport_applications") {
-      tableData.push(
-        {
-          field: "Full Name",
-          value: `${submission.first_name || ""} ${submission.surname || ""}`,
-        },
-        { field: "Date of Birth", value: submission.date_of_birth },
-        { field: "Gender", value: submission.gender }
-      );
-    }
-
-    doc.autoTable({
-      startY: 45,
-      head: [tableColumns.map((col) => col.header)],
-      body: tableData.map((row) => [row.field, row.value]),
-      theme: "grid",
-      headStyles: { fillColor: [52, 152, 219] },
-      margin: { top: 40 },
-    });
-
-    doc.save(`${submission.form_type}_${submission.id}.pdf`);
   };
 
-  const handleApprove = async () => {
-    if (submission.status === "approved") {
-      toast.warning("This submission is already approved");
-      return;
-    }
+  const renderFormFields = () => {
+    if (!submission) return null;
 
-    setLoading(true);
-    try {
-      // Update in Supabase
-      const { error: updateError } = await supabaseClient
-        .from(submission.form_type)
-        .update({
-          status: "approved",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", submission.id)
-        .select() // Return the updated record
-        .single();
+    const commonProps = {
+      className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2"
+    };
 
-      if (updateError) throw updateError;
-
-      // Call the onApprove callback with updated data
-      const updatedSubmission = {
-        ...submission,
-        status: "approved",
-        updated_at: new Date().toISOString(),
-      };
-
-      onApprove(updatedSubmission);
-      toast.success("Submission approved successfully");
-    } catch (err) {
-      console.error("Error approving submission:", err);
-      toast.error(`Failed to approve submission: ${err.message}`);
-    } finally {
-      setLoading(false);
+    switch (submission.form_type) {
+      case "passport_applications":
+        return (
+          <div {...commonProps}>
+            {renderField("Full Name", `${submission.first_name || ''} ${submission.surname || ''}`.trim())}
+            {renderField("Date of Birth", submission.date_of_birth)}
+            {renderField("Ghana Card", submission.ghana_card_number)}
+            {renderField("Mobile", submission.mobile_number)}
+            {renderField("Email", submission.email)}
+            {renderField("Digital Address", submission.digital_address)}
+            {renderField("Occupation", submission.occupation)}
+            {renderField("Mother's Name", submission.mother_name)}
+            {renderField("Father's Name", submission.father_name)}
+            {renderField("Status", submission.marital_status)}
+            {renderFile("Ghana Card", submission.ghana_card, true)}
+            {renderFile("Birth Cert", submission.birth_certificate)}
+          </div>
+        );
+      case "birth_certificates":
+        return (
+          <div {...commonProps}>
+            {renderField("Child's Name", `${submission.first_name || ''} ${submission.surname || ''}`.trim())}
+            {renderField("Date of Birth", submission.date_of_birth)}
+            {renderField("Place of Birth", submission.place_of_birth)}
+            {renderField("Father's Name", submission.father_name)}
+            {renderField("Mother's Name", submission.mother_maiden_name)}
+            {renderField("Address", submission.residential_address)}
+            {renderField("Phone", submission.telephone)}
+            {renderField("District", submission.district)}
+            {renderField("Father's Job", submission.father_occupation)}
+            {renderField("Mother's Job", submission.mother_occupation)}
+          </div>
+        );
+      case "company_applications":
+        return (
+          <div {...commonProps}>
+            {renderField("Company Name", submission.business_name_1)}
+            {renderField("Business Type", submission.nature_of_business)}
+            {renderField("Address", `${submission.business_house_number || ''}, ${submission.business_street_name || ''}`.trim())}
+            {renderField("Phone", submission.business_phone_number)}
+            {renderField("Director", submission.director_full_name)}
+            {renderField("Director Phone", submission.director_phone_number)}
+            {renderField("Ghana Card", submission.director_ghana_card_number)}
+            {renderField("TIN", submission.director_tin)}
+            {renderField("Capital", submission.stated_capital)}
+            {renderField("Type", "Company Registration")}
+            {renderFile("Ghana Card Front", submission.ghana_card_front, true)}
+            {renderFile("Ghana Card Back", submission.ghana_card_back, true)}
+          </div>
+        );
+      case "sole_proprietorship_applications":
+        return (
+          <div {...commonProps}>
+            {renderField("Business Name", submission.business_name_1)}
+            {renderField("Owner", submission.full_name)}
+            {renderField("Phone", submission.phone_number)}
+            {renderField("Ghana Card", submission.ghana_card_number)}
+            {renderField("TIN", submission.tin)}
+            {renderField("Address", `${submission.business_house_number || ''}, ${submission.business_street_name || ''}`.trim())}
+            {renderField("Digital Address", submission.business_digital_address)}
+            {renderField("Business Type", submission.nature_of_business)}
+            {renderField("Occupation", submission.occupation)}
+            {renderField("Type", "Sole Proprietorship")}
+            {renderFile("Ghana Card Front", submission.ghana_card_front, true)}
+            {renderFile("Ghana Card Back", submission.ghana_card_back, true)}
+          </div>
+        );
+      default:
+        return null;
     }
   };
+
+  if (!submission) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-xl font-bold">
+      {/* Image Preview Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-screen">
+            <img 
+              src={selectedImage} 
+              alt="Preview" 
+              className="max-w-full max-h-screen object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-2 right-2 text-white text-xl hover:text-gray-300"
+            >
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Modal */}
+      <div className="bg-white rounded-lg w-full max-w-3xl mx-auto relative">
+        <button
+          onClick={onClose}
+          className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100 transition-colors"
+          aria-label="Close modal"
+        >
+          <FaTimes className="text-gray-600 text-lg" />
+        </button>
+
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div className="w-full">
+              <h2 className="text-xl font-bold text-gray-800">
                 {submission.form_type.replace(/_/g, " ")}
               </h2>
               <div className="flex items-center mt-1">
                 <StatusBadge status={submission.status} />
-                <span className="ml-2 text-sm text-gray-500">
-                  Submitted on{" "}
+                <span className="ml-2 text-xs text-gray-600">
                   {new Date(submission.created_at).toLocaleString()}
                 </span>
               </div>
             </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={exportToPDF}
-                className="flex items-center space-x-1 bg-blue-500 text-white px-3 py-1 rounded text-sm"
-              >
-                <FaDownload size={12} />
-                <span>Export PDF</span>
-              </button>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                <FaTimes />
-              </button>
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {renderField(
-              "Submission Date",
-              new Date(submission.created_at).toLocaleString()
-            )}
-
-            {submission.form_type === "passport_applications" && (
-              <>
-                {renderField(
-                  "Full Name",
-                  `${submission.first_name || ""} ${submission.surname || ""}`
-                )}
-                {renderField("Date of Birth", submission.date_of_birth)}
-                {renderField("Gender", submission.gender)}
-                {renderFile("Ghana Card", submission.ghana_card)}
-              </>
-            )}
-          </div>
-
-          <div className="mt-6 pt-4 border-t flex justify-end">
-            <button
-              onClick={handleApprove}
-              disabled={submission.status === "approved" || loading}
-              className={`px-4 py-2 rounded-lg flex items-center ${
-                submission.status === "approved"
-                  ? "bg-gray-200 text-gray-600 cursor-not-allowed"
-                  : "bg-green-600 text-white hover:bg-green-700"
-              }`}
-            >
-              {loading ? (
-                <>
-                  <FaSpinner className="animate-spin mr-2" />
-                  Approving...
-                </>
-              ) : (
-                "Approve"
-              )}
-            </button>
+          <div className="mt-3">
+            {renderFormFields()}
           </div>
         </div>
       </div>

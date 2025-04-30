@@ -1,10 +1,10 @@
-// FormDetailPage.js
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabaseClient } from "../../supabase/client";
-import { FaArrowLeft, FaSpinner } from "react-icons/fa";
+import { FaArrowLeft, FaSpinner, FaFilePdf } from "react-icons/fa";
 import StatusBadge from "./StatusBadge";
 import { toast } from "react-toastify";
+import { jsPDF } from "jspdf";
 
 const FormDetailPage = () => {
   const { id } = useParams();
@@ -68,7 +68,6 @@ const FormDetailPage = () => {
 
     setApproving(true);
     try {
-      // Update in Supabase
       const { error: updateError } = await supabaseClient
         .from(formType)
         .update({
@@ -76,12 +75,11 @@ const FormDetailPage = () => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
-        .select() // Return the updated record
+        .select()
         .single();
 
       if (updateError) throw updateError;
 
-      // Update local state
       setSubmission((prev) => ({
         ...prev,
         status: "approved",
@@ -90,7 +88,6 @@ const FormDetailPage = () => {
 
       toast.success("Submission approved successfully");
 
-      // Navigate back with refresh flag
       navigate(-1, {
         state: {
           shouldRefresh: true,
@@ -107,8 +104,123 @@ const FormDetailPage = () => {
     }
   };
 
+  const formatPDFValue = (key, value) => {
+    if (value === null || value === undefined) return "N/A";
+    
+    if (key.includes("date") && !isNaN(new Date(value).getTime())) {
+      return new Date(value).toLocaleDateString();
+    }
+    
+    if (typeof value === "object") {
+      return JSON.stringify(value);
+    }
+    
+    return String(value);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPos = 30;
+  
+    // Header (20px font, bold)
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${formatFormType(formType)} Submission Details`, pageWidth / 2, 20, { align: "center" });
+  
+   
+    // Function to capitalize first letter of each word
+    const capitalizeFieldName = (str) => {
+      return str.replace(/\b\w/g, char => char.toUpperCase());
+    };
+  
+    // Get all fields except metadata and excluded fields
+    const fields = Object.entries(submission)
+      .filter(([key]) => {
+        const excludedFields = [
+          'id', 
+          'created_at', 
+          'updated_at', 
+          'status', 
+          'form_type',
+          // Ghana Card fields
+          'ghana_card',
+          'ghana_card_number',
+          'ghana_card_front',
+          'ghana_card_back',
+          // Birth certificate fields
+          'birth_certificate',
+          'old_birth_certificate',
+          // Signature fields
+          'signature',
+          'director_signature',
+          'applicant_signature',
+          'owner_signature',
+          // Any file/document fields
+          ...Object.keys(submission).filter(key => 
+            key.includes("file") || 
+            key.includes("document") || 
+            key.includes("image")
+          ),
+          // Passport specific fields to exclude
+          ...(formType === 'passport_applications' ? [
+            'old_passport',
+            'proof_of_occupation'
+          ] : [])
+        ];
+        return !excludedFields.includes(key);
+      })
+      .map(([key, value]) => ({
+        key: capitalizeFieldName(key.replace(/_/g, " ")),
+        value: formatPDFValue(key, value)
+      }));
+  
+    // Draw single column content
+    fields.forEach((field, index) => {
+      // Check if we need a new page
+      if (yPos > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        yPos = 20;
+      }
+  
+      // Alternate row background
+      if (index % 2 === 0) {
+        doc.setFillColor(245, 245, 245); // light gray
+        doc.rect(margin - 2, yPos - 4, pageWidth - 2 * margin, 18, 'F');
+      }
+  
+      // Field name (always bold)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      const fieldText = `${field.key}:`;
+      doc.text(fieldText, margin, yPos + 5);
+  
+      // Calculate x position for value (field text width + padding)
+      const fieldWidth = doc.getStringUnitWidth(fieldText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+      const valueXPos = margin + fieldWidth + 6; // 6 units padding after colon
+  
+      // Field value (always normal)
+      doc.setFont("helvetica", "normal");
+      const text = doc.splitTextToSize(String(field.value), pageWidth - valueXPos - margin);
+      doc.text(text, valueXPos, yPos + 5);
+  
+      // Move y position down based on content height
+      yPos += Math.max(15, 5 + (text.length * 5));
+    });
+  
+    doc.save(`${formType}_${id}.pdf`);
+  };
+
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const formatFormType = (type) => {
+    return type
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   if (loading)
@@ -146,13 +258,6 @@ const FormDetailPage = () => {
         </button>
       </div>
     );
-
-  const formatFormType = (type) => {
-    return type
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
@@ -201,8 +306,8 @@ const FormDetailPage = () => {
           ))}
       </div>
 
-      {submission.status === "pending" && (
-        <div className="flex justify-end space-x-4">
+      <div className="flex justify-end space-x-4">
+        {submission.status === "pending" ? (
           <button
             onClick={handleApprove}
             disabled={approving}
@@ -217,8 +322,16 @@ const FormDetailPage = () => {
               "Approve Submission"
             )}
           </button>
-        </div>
-      )}
+        ) : (
+          <button
+            onClick={exportToPDF}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+          >
+            <FaFilePdf className="mr-2" />
+            Export as PDF
+          </button>
+        )}
+      </div>
     </div>
   );
 };

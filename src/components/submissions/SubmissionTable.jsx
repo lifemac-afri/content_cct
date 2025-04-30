@@ -3,6 +3,40 @@ import StatusBadge from "./StatusBadge";
 import { FaEye } from "react-icons/fa";
 
 const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onViewClick }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
+  const getName = (submission) => {
+    if (!submission) return 'N/A';
+    
+    switch (submission.form_type) {
+      case "passport_applications":
+        return `${submission.first_name || ''} ${submission.surname || ''}`.trim() || 'N/A';
+      case "birth_certificates":
+        return `${submission.first_name || ''} ${submission.surname || ''}`.trim() || 'N/A';
+      case "company_applications":
+      case "sole_proprietorship_applications":
+        return submission.business_name_1 || 'N/A';
+      default:
+        return 'N/A';
+    }
+  };
+
+  const getFormTypeDisplay = (submission) => {
+    if (!submission) return 'N/A';
+    return submission.formatted_form_type || 
+           submission.form_type?.replace(/_/g, ' ') || 
+           'N/A';
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -18,20 +52,6 @@ const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onVie
       </div>
     );
   }
-
-  const getName = (submission) => {
-    switch (submission.form_type) {
-      case "passport_applications":
-        return `${submission.first_name} ${submission.surname}`;
-      case "birth_certificates":
-        return `${submission.first_name} ${submission.surname}`;
-      case "company_applications":
-      case "sole_proprietorship_applications":
-        return submission.business_name_1;
-      default:
-        return "N/A";
-    }
-  };
 
   return (
     <div className="overflow-x-auto">
@@ -66,7 +86,7 @@ const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onVie
             >
               {showFormType && (
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {submission.formatted_form_type}
+                  {getFormTypeDisplay(submission)}
                 </td>
               )}
               <td className="px-6 py-4 whitespace-nowrap">
@@ -75,10 +95,10 @@ const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onVie
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {submission.created_at ? new Date(submission.created_at).toLocaleString() : 'N/A'}
+                {formatDate(submission.created_at)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <StatusBadge status={submission.status} />
+                <StatusBadge status={submission.status || 'pending'} />
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
