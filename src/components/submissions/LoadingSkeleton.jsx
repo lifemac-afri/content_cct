@@ -1,5 +1,3 @@
-import React from "react";
-
 const LoadingSkeleton = () => (
   <div className="space-y-4">
     {[...Array(5)].map((_, i) => (

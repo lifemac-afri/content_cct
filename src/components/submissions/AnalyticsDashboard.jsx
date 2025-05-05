@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -12,6 +12,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import PropTypes from 'prop-types';
 
 const AnalyticsDashboard = ({ submissions = [] }) => {
   // State for top charts
@@ -60,7 +61,7 @@ const AnalyticsDashboard = ({ submissions = [] }) => {
     } catch (error) {
       console.error("Error processing submission dates:", error);
     }
-  }, [submissions]);
+  }, [submissions, selectedYear]);
 
   // Generate available months for top charts
   useEffect(() => {
@@ -83,7 +84,7 @@ const AnalyticsDashboard = ({ submissions = [] }) => {
         console.error("Error processing months:", error);
       }
     }
-  }, [timeRange, selectedYear, submissions]);
+  }, [timeRange, selectedYear, selectedMonth, submissions]);
 
   // Generate available months for donut chart
   useEffect(() => {
@@ -106,7 +107,7 @@ const AnalyticsDashboard = ({ submissions = [] }) => {
         console.error("Error processing donut months:", error);
       }
     }
-  }, [donutTimeRange, donutSelectedYear, submissions]);
+  }, [donutTimeRange, donutSelectedYear, donutSelectedMonth, submissions]);
 
   // Filter data for top charts
   useEffect(() => {
@@ -371,7 +372,7 @@ const AnalyticsDashboard = ({ submissions = [] }) => {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${!isNaN(percent) ? `${(percent * 100).toFixed(0)}%` : "0%"}`}
+                      label={({ percent }) => `${!isNaN(percent) ? `${(percent * 100).toFixed(0)}%` : "0%"}`}
                     >
                       {pieChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -477,5 +478,22 @@ const AnalyticsDashboard = ({ submissions = [] }) => {
     </div>
   );
 };
+
+
+
+AnalyticsDashboard.propTypes = {
+  submissions: PropTypes.arrayOf(
+    PropTypes.shape({
+      form_type: PropTypes.string,
+      status: PropTypes.string,
+      created_at: PropTypes.string, // or PropTypes.instanceOf(Date)
+    })
+  ),
+};
+
+AnalyticsDashboard.defaultProps = {
+  submissions: [],
+};
+
 
 export default AnalyticsDashboard;

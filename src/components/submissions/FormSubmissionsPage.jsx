@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabaseClient } from "../../supabase/client";
 import SubmissionTable from "./SubmissionTable";
-import { FaArrowLeft, FaFilter, FaEye, FaSpinner } from "react-icons/fa";
-import StatusBadge from "./StatusBadge";
+import { FaArrowLeft, FaFilter } from "react-icons/fa";
 import SubmissionDetailModal from "./SubmissionDetailModal";
 import { toast } from "react-toastify";
 
@@ -17,7 +16,6 @@ const FormSubmissionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-  const [approving, setApproving] = useState(false);
   const itemsPerPage = 10;
 
   // Function to format form type for display
@@ -31,7 +29,7 @@ const FormSubmissionsPage = () => {
     return formTypes[type] || type.replace(/_/g, ' ');
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -92,11 +90,11 @@ const FormSubmissionsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formType]);
 
   useEffect(() => {
     fetchData();
-  }, [formType, location.state?.refresh]);
+  }, [formType, location.state?.refresh, fetchData]);
 
   useEffect(() => {
     if (location.state?.approvedId) {
@@ -114,7 +112,6 @@ const FormSubmissionsPage = () => {
   }, [location.state, statusFilter]);
 
   const handleApprove = async (updatedSubmission) => {
-    setApproving(true);
     try {
       // Update in Supabase
       const { error: updateError } = await supabaseClient
@@ -148,8 +145,6 @@ const FormSubmissionsPage = () => {
     } catch (err) {
       console.error("Error approving submission:", err);
       toast.error(`Failed to approve submission: ${err.message}`);
-    } finally {
-      setApproving(false);
     }
   };
 
@@ -238,7 +233,7 @@ const FormSubmissionsPage = () => {
       <SubmissionTable
         submissions={paginatedSubmissions}
         loading={false}
-        showFormType={formType === "all"} // Pass this prop to show/hide form type column
+        showFormType={formType === "all"}
         onRowClick={(submission) => 
           navigate(`${submission.id}`, { 
             state: { formType: submission.form_type },

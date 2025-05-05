@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from 'prop-types';
 
 const MetricCard = ({ 
   icon: Icon, 
@@ -37,5 +37,25 @@ const MetricCard = ({
     </div>
   </div>
 );
+
+MetricCard.propTypes = {
+  icon: PropTypes.elementType,
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.number
+  ]).isRequired,
+  trend: PropTypes.number,
+  className: PropTypes.string,
+  onClick: PropTypes.func,
+  isActive: PropTypes.bool
+};
+
+MetricCard.defaultProps = {
+  trend: null,
+  className: "",
+  onClick: null,
+  isActive: false
+};
 
 export default MetricCard;

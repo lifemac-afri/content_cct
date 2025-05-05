@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabaseClient } from "../../supabase/client";
 import { FaArrowLeft, FaSpinner, FaFilePdf, FaImage, FaTimes, FaRedo } from "react-icons/fa";
@@ -18,7 +18,7 @@ const FormDetailPage = () => {
   const [imageLoadError, setImageLoadError] = useState({});
   const [retryCount, setRetryCount] = useState(0);
 
-  const getFormType = () => {
+  const getFormType = useCallback(() => {
     if (location.state?.formType) return location.state.formType;
 
     const pathParts = location.pathname.split("/");
@@ -30,20 +30,20 @@ const FormDetailPage = () => {
     ];
 
     return pathParts.find((part) => validForms.includes(part));
-  };
+  }, [location.state?.formType, location.pathname]);
 
   const formType = getFormType();
 
-  const getBucketName = () => {
+  const getBucketName = useCallback(() => {
     switch(formType) {
       case "passport_applications": return "passport_uploads";
       case "company_applications": return "company_uploads";
       case "sole_proprietorship_applications": return "sole_proprietorship_uploads";
       default: return "uploads";
     }
-  };
+  }, [formType]);
 
-  const getPublicUrl = (filePath) => {
+  const getPublicUrl = useCallback((filePath) => {
     if (!filePath || typeof filePath !== 'string') return null;
     
     if (!filePath.includes('/') && !filePath.includes('.') && !filePath.includes('supabase.co')) {
@@ -69,9 +69,9 @@ const FormDetailPage = () => {
       console.error("URL Generation Error:", error);
       return null;
     }
-  };
+  }, [getBucketName]);
 
-  const fetchSubmission = async () => {
+  const fetchSubmission = useCallback(async () => {
     try {
       if (!formType) {
         throw new Error("Form type not specified");
@@ -94,11 +94,11 @@ const FormDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formType, id]);
 
   useEffect(() => {
     fetchSubmission();
-  }, [id, formType, retryCount]);
+  }, [fetchSubmission, retryCount]);
 
   const retryFetch = () => {
     setError(null);

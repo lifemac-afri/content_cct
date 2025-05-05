@@ -1,14 +1,14 @@
-import React from "react";
+import PropTypes from 'prop-types';
 import { FaTimes } from "react-icons/fa";
 import StatusBadge from "./StatusBadge";
 
 const SubmissionDetailModal = ({ submission, onClose }) => {
   const renderField = (label, value) => (
-    <div className="mb-4 px-2"> {/* Increased margin-bottom */}
-      <label className="block text-base font-medium text-gray-800"> {/* Increased text size */}
+    <div className="mb-4 px-2">
+      <label className="block text-base font-medium text-gray-800">
         {label}
       </label>
-      <p className="mt-2 text-base text-gray-900 break-words"> {/* Increased text size and margin-top */}
+      <p className="mt-2 text-base text-gray-900 break-words">
         {value !== null && value !== undefined && value !== '' 
           ? value 
           : "Not provided"}
@@ -20,7 +20,7 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
     if (!submission) return null;
 
     const commonProps = {
-      className: "grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4" /* Increased gaps */
+      className: "grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"
     };
 
     switch (submission.form_type) {
@@ -94,37 +94,81 @@ const SubmissionDetailModal = ({ submission, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-3xl mx-auto relative">
-        {/* Close button with increased size */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 text-gray-500 hover:text-gray-700"
           aria-label="Close modal"
         >
-          <FaTimes className="text-2xl" /> {/* Increased size */}
+          <FaTimes className="text-2xl" />
         </button>
 
-        <div className="p-8"> {/* Increased padding */}
-          <div className="flex justify-between items-center mb-6"> {/* Increased margin-bottom */}
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-6">
             <div className="w-full">
-              <h2 className="text-2xl font-bold text-gray-900"> {/* Increased text size */}
+              <h2 className="text-2xl font-bold text-gray-900">
                 {submission.form_type.replace(/_/g, " ")}
               </h2>
-              <div className="flex items-center mt-2"> {/* Increased margin-top */}
+              <div className="flex items-center mt-2">
                 <StatusBadge status={submission.status} />
-                <span className="ml-3 text-sm text-gray-600"> {/* Increased text size and margin-left */}
+                <span className="ml-3 text-sm text-gray-600">
                   {new Date(submission.created_at).toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6"> {/* Increased margin-top */}
+          <div className="mt-6">
             {renderFormFields()}
           </div>
         </div>
       </div>
     </div>
   );
+};
+
+SubmissionDetailModal.propTypes = {
+  submission: PropTypes.shape({
+    form_type: PropTypes.string.isRequired,
+    first_name: PropTypes.string,
+    surname: PropTypes.string,
+    date_of_birth: PropTypes.string,
+    ghana_card_number: PropTypes.string,
+    mobile_number: PropTypes.string,
+    email: PropTypes.string,
+    digital_address: PropTypes.string,
+    occupation: PropTypes.string,
+    mother_name: PropTypes.string,
+    father_name: PropTypes.string,
+    marital_status: PropTypes.string,
+    place_of_birth: PropTypes.string,
+    mother_maiden_name: PropTypes.string,
+    residential_address: PropTypes.string,
+    telephone: PropTypes.string,
+    district: PropTypes.string,
+    father_occupation: PropTypes.string,
+    mother_occupation: PropTypes.string,
+    business_name_1: PropTypes.string,
+    nature_of_business: PropTypes.string,
+    business_house_number: PropTypes.string,
+    business_street_name: PropTypes.string,
+    business_phone_number: PropTypes.string,
+    director_full_name: PropTypes.string,
+    director_ghana_card_number: PropTypes.string,
+    director_phone_number: PropTypes.string,
+    director_tin: PropTypes.string,
+    stated_capital: PropTypes.string,
+    full_name: PropTypes.string,
+    phone_number: PropTypes.string,
+    tin: PropTypes.string,
+    business_digital_address: PropTypes.string,
+    status: PropTypes.string,
+    created_at: PropTypes.string,
+  }),
+  onClose: PropTypes.func.isRequired,
+};
+
+SubmissionDetailModal.defaultProps = {
+  submission: null,
 };
 
 export default SubmissionDetailModal;

@@ -1,15 +1,21 @@
-import React from "react";
-import StatusBadge from "./StatusBadge";
+import PropTypes from 'prop-types';
 import { FaEye } from "react-icons/fa";
+import StatusBadge from "./StatusBadge";
 
-const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onViewClick }) => {
+const SubmissionTable = ({ 
+  submissions, 
+  loading, 
+  showFormType, 
+  onRowClick, 
+  onViewClick 
+}) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     
     try {
       const date = new Date(dateString);
       return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
-    } catch (e) {
+    } catch {
       return 'N/A';
     }
   };
@@ -117,6 +123,31 @@ const SubmissionTable = ({ submissions, loading, showFormType, onRowClick, onVie
       </table>
     </div>
   );
+};
+
+SubmissionTable.propTypes = {
+  submissions: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      form_type: PropTypes.string,
+      first_name: PropTypes.string,
+      surname: PropTypes.string,
+      business_name_1: PropTypes.string,
+      status: PropTypes.string,
+      created_at: PropTypes.string,
+      formatted_form_type: PropTypes.string,
+    })
+  ).isRequired,
+  loading: PropTypes.bool.isRequired,
+  showFormType: PropTypes.bool,
+  onRowClick: PropTypes.func,
+  onViewClick: PropTypes.func,
+};
+
+SubmissionTable.defaultProps = {
+  showFormType: false,
+  onRowClick: () => {},
+  onViewClick: () => {},
 };
 
 export default SubmissionTable;

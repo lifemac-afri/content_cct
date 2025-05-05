@@ -1,5 +1,5 @@
-import React from "react";
-import { FaCheck, FaClock, FaTimes } from "react-icons/fa";
+import PropTypes from 'prop-types';
+import { FaCheck, FaClock } from "react-icons/fa";
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -23,6 +23,10 @@ const StatusBadge = ({ status }) => {
       {config.text}
     </span>
   );
+};
+
+StatusBadge.propTypes = {
+  status: PropTypes.oneOf(['pending', 'approved']).isRequired,
 };
 
 export default StatusBadge;

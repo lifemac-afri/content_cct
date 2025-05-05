@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from 'prop-types';
 import { FaSync } from "react-icons/fa";
 
 const ErrorDisplay = ({ message, onRetry }) => {
@@ -17,6 +17,11 @@ const ErrorDisplay = ({ message, onRetry }) => {
       </div>
     </div>
   );
+};
+
+ErrorDisplay.propTypes = {
+  message: PropTypes.string.isRequired,
+  onRetry: PropTypes.func.isRequired,
 };
 
 export default ErrorDisplay;
